@@ -15,18 +15,25 @@ import duckdb
 
 RAIZ = Path(__file__).resolve().parent.parent
 RAW = RAIZ / "data" / "raw"
+EXTERNAL = RAIZ / "data" / "external"
 BASE = RAIZ / "data" / "processed" / "ecobici.duckdb"
 CARPETA_SQL = RAIZ / "sql"
 
 ARCHIVO_VIAJES = RAW / "badata_ecobici_recorridos_realizados_2024.csv"
 ARCHIVO_ESTACIONES_SHP = RAW / "nuevas-estaciones-ecobici.shp"
 ARCHIVO_ESTACIONES_GEOJSON = RAW / "estaciones.geojson"
+ARCHIVO_FERIADOS = EXTERNAL / "feriados_2024.csv"
 
 
 def verificar_archivos() -> None:
     faltantes = [
         p.name
-        for p in (ARCHIVO_VIAJES, ARCHIVO_ESTACIONES_SHP, ARCHIVO_ESTACIONES_GEOJSON)
+        for p in (
+            ARCHIVO_VIAJES,
+            ARCHIVO_ESTACIONES_SHP,
+            ARCHIVO_ESTACIONES_GEOJSON,
+            ARCHIVO_FERIADOS,
+        )
         if not p.exists()
     ]
     if faltantes:
@@ -48,6 +55,11 @@ def cargar_crudos(con: duckdb.DuckDBPyConnection) -> None:
     con.execute(f"""
         create or replace table raw_estaciones_geojson as
         select * exclude (geom) from ST_Read('{ARCHIVO_ESTACIONES_GEOJSON.as_posix()}')
+    """)
+    # Feriados nacionales (se descargan con: python -m src.feriados 2024).
+    con.execute(f"""
+        create or replace table raw_feriados as
+        select * from read_csv('{ARCHIVO_FERIADOS.as_posix()}')
     """)
 
 

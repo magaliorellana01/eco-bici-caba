@@ -12,12 +12,39 @@ Análisis de los viajes del sistema de bicicletas públicas de la Ciudad de Buen
 4. **¿Cómo influye el clima?** Lluvia y temperatura contra la cantidad de viajes.
 5. **¿Cómo evolucionó el uso entre años?**
 
+## Resultados
+
+### 1. ¿Cuándo se usa? ¿Para ir a trabajar o para pasear?
+
+**EcoBici es principalmente un medio de transporte, no de paseo.** El 85% de los viajes se hace en días hábiles: un día hábil promedio tiene unos 10.900 viajes, contra unos 4.000 en un sábado, un domingo o un feriado.
+
+| | Días hábiles | Fines de semana y feriados |
+|---|---:|---:|
+| Viajes de una ruta habitual del usuario | **46%** | 18% |
+| Viajes circulares (vuelven a la misma estación) | 6% | **13%** |
+| Duración mediana | 15 min | **25 min** |
+| Viajes de más de 30 minutos | 14% | **41%** |
+
+- **Los días hábiles tienen dos picos:** a las 8 h (560 viajes por hora) y a las 17 h (1.045 viajes por hora). Los fines de semana no hay pico a la mañana: el uso crece de a poco y se mantiene alto de 14 a 19 h.
+- **El pico de la tarde casi duplica al de la mañana.** La franja de 16 a 20 h concentra el 34% de los viajes de un día hábil, y la de 7 a 10 h, el 13%. Pero a la mañana el uso es más "de trabajo": el 67% de esos viajes son de una ruta habitual, contra el 42% a la tarde. A la tarde se mezcla la vuelta a casa con trámites y salidas.
+
+Consultas: [`sql/10_uso_temporal.sql`](sql/10_uso_temporal.sql).
+
 ## Datos
 
 - **Viajes:** [Bicicletas públicas](https://data.buenosaires.gob.ar/dataset/bicicletas-publicas), portal de datos abiertos del GCBA. Un archivo por año (2010 a 2026) con estación de origen y destino, fecha y hora de salida y llegada.
 - **Estaciones:** [Estaciones de bicicletas públicas](https://data.buenosaires.gob.ar/dataset/estaciones-bicicletas-publicas), con coordenadas y capacidad.
 - **Usuarios:** edad, género y fecha de alta, en el mismo dataset de los viajes.
 - **Clima:** a definir (datos históricos diarios u horarios de Buenos Aires).
+- **Feriados:** feriados nacionales de [ArgentinaDatos](https://argentinadatos.com) (`python -m src.feriados 2024`).
+
+## Metodología
+
+- **Día hábil vs no hábil:** los feriados cuentan como no hábiles, igual que los fines de semana. Un feriado que cae un miércoles se comporta como un domingo (unos 4.500 viajes contra 11.000).
+- **Promedios por día calendario:** los viajes promedio por hora se dividen por la cantidad de días de cada tipo, no por los días con viajes.
+- **Señales de viaje "de trabajo":**
+  - *Ruta habitual:* el usuario hace ese mismo recorrido, en cualquier sentido, en 5 días distintos o más del año.
+  - *Ida y vuelta:* el usuario va de A a B y su siguiente viaje del día es de B a A. Es una señal más estricta, porque no detecta a quien va en bici y vuelve en otro medio. En días hábiles llega al 15% de los viajes.
 
 ## Estructura del proyecto
 
