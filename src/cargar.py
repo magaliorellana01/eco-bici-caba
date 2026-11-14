@@ -23,6 +23,8 @@ ARCHIVO_VIAJES = RAW / "badata_ecobici_recorridos_realizados_2024.csv"
 ARCHIVO_ESTACIONES_SHP = RAW / "nuevas-estaciones-ecobici.shp"
 ARCHIVO_ESTACIONES_GEOJSON = RAW / "estaciones.geojson"
 ARCHIVO_FERIADOS = EXTERNAL / "feriados_2024.csv"
+ARCHIVO_CLIMA_DIARIO = EXTERNAL / "clima_diario_2024.csv"
+ARCHIVO_CLIMA_HORARIO = EXTERNAL / "clima_horario_2024.csv"
 
 
 def verificar_archivos() -> None:
@@ -33,6 +35,8 @@ def verificar_archivos() -> None:
             ARCHIVO_ESTACIONES_SHP,
             ARCHIVO_ESTACIONES_GEOJSON,
             ARCHIVO_FERIADOS,
+            ARCHIVO_CLIMA_DIARIO,
+            ARCHIVO_CLIMA_HORARIO,
         )
         if not p.exists()
     ]
@@ -60,6 +64,39 @@ def cargar_crudos(con: duckdb.DuckDBPyConnection) -> None:
     con.execute(f"""
         create or replace table raw_feriados as
         select * from read_csv('{ARCHIVO_FERIADOS.as_posix()}')
+    """)
+    # Viajes de años anteriores (trips_2019.csv a trips_2023.csv). Tienen otro
+    # formato: todo se lee como texto y se convierte en sql/50_evolucion.sql.
+    # Es una vista: no se copian a la base, solo se leen para agregarlos.
+    archivos_historicos = sorted(RAW.glob("trips_*.csv"))
+    if archivos_historicos:
+        lista = ", ".join(f"'{p.as_posix()}'" for p in archivos_historicos)
+        con.execute(f"""
+            create or replace view raw_viajes_historicos as
+            select * from read_csv([{lista}], all_varchar = true, union_by_name = true)
+        """)
+        print(f"  Años anteriores: {', '.join(p.stem for p in archivos_historicos)}")
+    else:
+        # Sin años anteriores, la evolución queda solo con 2024.
+        columnas = [
+            "Id_recorrido", "duracion_recorrido", "fecha_origen_recorrido",
+            "id_estacion_origen", "nombre_estacion_origen", "id_estacion_destino",
+            "nombre_estacion_destino", "id_usuario",
+        ]
+        con.execute(
+            "create or replace view raw_viajes_historicos as select "
+            + ", ".join(f"null::varchar as {c}" for c in columnas)
+            + " where false"
+        )
+        print("  Años anteriores: no hay archivos trips_*.csv (se analiza solo 2024)")
+    # Clima de Open-Meteo (se descarga con: python -m src.clima 2024).
+    con.execute(f"""
+        create or replace table raw_clima_diario as
+        select * from read_csv('{ARCHIVO_CLIMA_DIARIO.as_posix()}')
+    """)
+    con.execute(f"""
+        create or replace table raw_clima_horario as
+        select * from read_csv('{ARCHIVO_CLIMA_HORARIO.as_posix()}')
     """)
 
 
