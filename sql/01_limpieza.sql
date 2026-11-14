@@ -10,7 +10,6 @@
 -- en el orden del CASE. Así el embudo suma exacto y no cuenta dos veces.
 -- Es una vista (no una tabla) para no guardar los 3,5 millones de viajes
 -- dos veces en la base.
-drop table if exists viajes_marcados;
 create or replace view viajes_marcados as
 with numerados as (
     select
