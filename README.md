@@ -56,12 +56,49 @@ Para cada estación se buscó **con cuántas bicis conviene arrancar el día** p
 
 Consultas: [`sql/20_rebalanceo.sql`](sql/20_rebalanceo.sql). La tabla `rebalanceo` tiene la recomendación para cada una de las 395 estaciones.
 
+### 3. ¿Cuáles son los recorridos más frecuentes?
+
+**La demanda está muy repartida.** Hay 51 mil pares de estaciones distintos con al menos un viaje. Los 10 recorridos más usados suman el 1,4% de los viajes, los 100 más usados el 6,8% y los 1.000 más usados el 28%.
+
+**Los recorridos más usados en días hábiles son de "última milla":** conectan una estación de tren o de subte con oficinas, facultades o barrios cercanos.
+
+| # | Recorrido (ida + vuelta) | Viajes en días hábiles | Distancia |
+|---:|---|---:|---:|
+| 1 | Pacífico ↔ Plaza de la Shoá | 6.484 | 770 m |
+| 2 | Facultad de Derecho ↔ MALBA | 5.108 | 1,4 km |
+| 3 | Retiro II ↔ Barrio 31 | 3.759 | 1,1 km |
+| 4 | Plaza Roma ↔ Rodrigo Bueno | 3.487 | 2,1 km |
+| 5 | Retiro II ↔ Madero Office | 3.418 | 1,2 km |
+
+- **Se usan en los dos sentidos:** en los 20 recorridos más frecuentes, cada sentido tiene entre el 40% y el 60% de los viajes. Son la ida y la vuelta de un mismo trayecto habitual.
+- **Los fines de semana, el uso se muda a los parques de Palermo:** Plaza Italia, el Rosedal (Plazoleta Río de la Plata) y Plaza de la Shoá, con viajes de unos 30 minutos.
+- **Son viajes cortos:** la mitad recorre menos de 1,9 km en línea recta. En el 22% de los viajes, el origen y el destino quedan en el mismo barrio.
+
+Consultas: [`sql/30_recorridos.sql`](sql/30_recorridos.sql). La tabla `recorridos` tiene los 89 mil pares origen-destino, con coordenadas para dibujarlos en un mapa.
+
+### 4. ¿Cómo influyen la lluvia y la temperatura?
+
+**La lluvia es el factor que más pesa.** Cada día hábil lluvioso se comparó con los días hábiles secos de su mismo mes, para no confundir la lluvia con la estación del año:
+
+| Lluvia en el día | Días hábiles | Viajes frente a un día seco del mismo mes |
+|---|---:|---:|
+| Leve (1 a 10 mm) | 34 | −13% |
+| Moderada (10 a 25 mm) | 15 | **−42%** |
+| Fuerte (25 mm o más) | 8 | **−51%** |
+
+- **Hora por hora, el efecto es más fuerte todavía:** en una hora en que llueve 1 mm o más, los viajes caen un 63% frente a la misma hora de un día seco del mismo mes. Con llovizna (menos de 1 mm) caen un 17%.
+- **La temperatura ideal está entre 20 y 25 °C de máxima.** En días hábiles secos, el promedio es de 13.200 viajes con 20 a 25 °C, de 9.200 con 10 a 15 °C y de 10.600 con 30 a 35 °C. Este efecto está menos aislado que el de la lluvia, porque los días fríos coinciden con las vacaciones de invierno.
+
+**Para la operación:** el pronóstico de lluvia sirve para planificar. Un día de lluvia moderada o fuerte, la demanda cae a la mitad, así que los camiones de rebalanceo pueden dedicarse a mantenimiento.
+
+Consultas: [`sql/40_clima.sql`](sql/40_clima.sql).
+
 ## Datos
 
 - **Viajes:** [Bicicletas públicas](https://data.buenosaires.gob.ar/dataset/bicicletas-publicas), portal de datos abiertos del GCBA. Un archivo por año (2010 a 2026) con estación de origen y destino, fecha y hora de salida y llegada.
 - **Estaciones:** [Estaciones de bicicletas públicas](https://data.buenosaires.gob.ar/dataset/estaciones-bicicletas-publicas), con coordenadas y capacidad.
 - **Usuarios:** edad, género y fecha de alta, en el mismo dataset de los viajes.
-- **Clima:** a definir (datos históricos diarios u horarios de Buenos Aires).
+- **Clima:** temperatura y lluvia diarias y horarias de Buenos Aires, de la [API histórica de Open-Meteo](https://open-meteo.com/en/docs/historical-weather-api) (reanálisis ERA5, licencia CC BY 4.0) (`python -m src.clima 2024`).
 - **Feriados:** feriados nacionales de [ArgentinaDatos](https://argentinadatos.com) (`python -m src.feriados 2024`).
 
 ## Metodología
