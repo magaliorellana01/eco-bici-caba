@@ -93,6 +93,29 @@ Consultas: [`sql/30_recorridos.sql`](sql/30_recorridos.sql). La tabla `recorrido
 
 Consultas: [`sql/40_clima.sql`](sql/40_clima.sql).
 
+### 5. ¿Cómo evolucionó el uso entre años?
+
+| Año | Viajes | Usuarios | Estaciones activas por día | Viajes por día de lunes a viernes (mediana) | Viajes por día de fin de semana (mediana) | % de viajes en fin de semana |
+|---|---:|---:|---:|---:|---:|---:|
+| 2019* | 6.099.449 | 416.125 | 392 | 22.726 | 17.857 | 24% |
+| 2020 | 2.384.416 | 241.752 | 199 | 8.932 | 7.370 | 26% |
+| 2021 | 2.843.844 | 180.885 | 230 | 9.436 | 3.733 | 17% |
+| 2022 | 2.902.583 | 203.053 | 296 | 10.198 | 3.249 | 12% |
+| 2023 | 2.596.761 | 210.112 | 315 | 9.166 | 3.261 | 13% |
+| 2024 | 3.196.528 | 256.246 | 352 | 10.842 | 4.295 | 13% |
+
+<sub>* 2019 empieza el 17 de febrero, cuando arrancó el sistema actual, y la red recién estuvo completa en junio.</sub>
+
+Se ven tres quiebres:
+
+1. **La pandemia (2020).** No hay viajes en abril de 2020, y en mayo hubo apenas 1.300 por día hábil. La red pasó de unas 395 estaciones a menos de 200 y tardó cuatro años en volver a ese tamaño (386 en diciembre de 2024).
+2. **El cobro de los fines de semana (marzo de 2021).** De febrero a marzo de 2021, los viajes de fin de semana cayeron de unos 10.700 por día a 3.300, mientras que los de lunes a viernes no cambiaron. Coincide con el inicio del cobro a los residentes los sábados, domingos y feriados ([Ámbito, 14/03/2021](https://www.ambito.com/viajes/el-sistema-ecobici-porteno-dejo-ser-gratis-cuales-son-los-precios-usar-las-bicicletas-n5176631)). Desde entonces, EcoBici es sobre todo un transporte de días hábiles: el fin de semana pasó del 24% de los viajes al 13%.
+3. **La recuperación de 2024.** Fue el mejor año desde 2019: 23% más viajes y 22% más usuarios que en 2023. Entre septiembre y noviembre de 2024 se alcanzaron los valores más altos de la serie después de 2019: unos 13.300 viajes por día de lunes a viernes (mediana).
+
+**Igual, el uso está lejos de 2019.** Entre junio y octubre de 2019, con la red completa, se hacían unos 29.500 viajes por día de lunes a viernes, 2,2 veces más que en el mejor momento de 2024. Y como la red ya recuperó casi todas sus estaciones, la diferencia no se explica por tener menos estaciones: **cada estación se usa la mitad** (58 viajes por estación y por día en 2019, contra 31 en 2024).
+
+Consultas: [`sql/50_evolucion.sql`](sql/50_evolucion.sql).
+
 ## Datos
 
 - **Viajes:** [Bicicletas públicas](https://data.buenosaires.gob.ar/dataset/bicicletas-publicas), portal de datos abiertos del GCBA. Un archivo por año (2010 a 2026) con estación de origen y destino, fecha y hora de salida y llegada.
@@ -112,6 +135,11 @@ Consultas: [`sql/40_clima.sql`](sql/40_clima.sql).
   - Cada viaje es una salida (−1) en su estación de origen y una llegada (+1) en la de destino. Para cada estación y día hábil se acumula el saldo viaje a viaje, y así se obtiene la mayor pérdida y la mayor ganancia de ese día.
   - Una estación que arranca con *S* bicis "aguanta" un día si *S* ≥ la mayor pérdida del día y si *S* + la mayor ganancia del día ≤ capacidad. Se prueban todos los *S* posibles, de 0 a la capacidad, y se elige el que aguanta más días.
   - Se trabaja con días reales y no con el día promedio, porque el promedio esconde los días malos. Por la misma razón, lo que hay que mover se informa con el percentil 90.
+- **Comparación entre años:**
+  - Los archivos de 2019 a 2023 tienen otro formato: ids con texto ("5BAEcobici") y duración con coma de miles ("2,814"). La duración se validó contra la diferencia entre la hora de llegada y la de salida, y coincide en el 100% de los viajes.
+  - El portal ya les había sacado los viajes de menos de 1 minuto a esos años, pero no a 2024. Para comparar parejo, a todos los años se les aplicaron los mismos filtros.
+  - Se compara lunes a viernes contra fin de semana, sin separar los feriados, porque no hay calendario de feriados disponible para 2019 y 2020. Por eso se usa la mediana de viajes por día, que casi no se mueve por los pocos feriados de cada año.
+  - Los años anteriores no se guardan viaje por viaje en la base: se leen de los CSV y se agregan por día.
 - **Capacidad de las estaciones:** el GeoJSON de estaciones trae la capacidad (`ANCLAJES`), pero su id no coincide con el de los viajes y reutiliza números de estación. Por eso el cruce se hace por número de estación y se valida con el nombre (similitud ≥ 0,85) o con la distancia (menos de 300 m). Así queda bien asignada la capacidad de estaciones que concentran el 91% de los viajes. Las demás quedan sin dato en lugar de quedar con una capacidad que no es la suya.
 
 ## Limitaciones
@@ -148,9 +176,10 @@ pip install -r requirements.txt
 
 1. Descargar estos archivos del portal y guardarlos en `data/raw/`:
    - [Recorridos realizados 2024](https://data.buenosaires.gob.ar/dataset/bicicletas-publicas): descomprimir el ZIP (`badata_ecobici_recorridos_realizados_2024.csv`).
+   - Para la evolución entre años, los recorridos de 2019 a 2023, del mismo dataset: descomprimir cada ZIP (`trips_2019.csv` a `trips_2023.csv`). Son opcionales: sin ellos, la carga funciona igual, pero sin la pregunta 5.
    - [Estaciones (SHP) (nuevo sistema)](https://data.buenosaires.gob.ar/dataset/estaciones-bicicletas-publicas): descomprimir el ZIP (`nuevas-estaciones-ecobici.shp` y sus archivos asociados).
    - [Estaciones (GEOJSON) (nuevo sistema)](https://data.buenosaires.gob.ar/dataset/estaciones-bicicletas-publicas/resource/e62fb076-dc64-4c42-b8ea-a8dd47395062): guardar como `estaciones.geojson`. Si el navegador lo abre como texto, usar Ctrl + S.
-2. Generar la base: `python -m src.cargar` (tarda menos de un minuto y crea `data/processed/ecobici.duckdb`).
+2. Generar la base: `python -m src.cargar`. Tarda alrededor de un minuto con todos los años y crea `data/processed/ecobici.duckdb`. Los feriados y el clima ya están en `data/external/`.
 
 ## Tecnologías
 
