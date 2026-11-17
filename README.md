@@ -2,7 +2,7 @@
 
 Análisis de los viajes del sistema de bicicletas públicas de la Ciudad de Buenos Aires con **SQL (DuckDB)** y **Power BI**: cuándo y para qué se usa, qué recorridos son los más frecuentes y, sobre todo, **qué estaciones se vacían o se llenan y qué hacer al respecto** (el problema de rebalanceo).
 
-> Proyecto en curso.
+![Dashboard de rebalanceo](reports/figures/02_rebalanceo.png)
 
 ## Preguntas
 
@@ -11,6 +11,28 @@ Análisis de los viajes del sistema de bicicletas públicas de la Ciudad de Buen
 3. **¿Cuáles son los recorridos más frecuentes?**
 4. **¿Cómo influye el clima?** Lluvia y temperatura contra la cantidad de viajes.
 5. **¿Cómo evolucionó el uso entre años?**
+
+## Dashboard
+
+El dashboard de Power BI ([`dashboard/ecobici.pbix`](dashboard/ecobici.pbix)) tiene una página por pregunta.
+
+**1. Uso:** viajes por hora y por día de la semana, y cuántos viajes repiten una ruta habitual.
+
+![Página de uso](reports/figures/01_uso.png)
+
+**2. Rebalanceo:** mapa de estaciones por prioridad, curva del día de la estación elegida y recomendación para cada estación (con cuántas bicis arrancar y cuántas mover en un día malo).
+
+![Página de rebalanceo](reports/figures/02_rebalanceo.png)
+
+**3. Recorridos y clima:** los 10 recorridos más frecuentes en días hábiles y no hábiles, y el efecto de la lluvia y la temperatura.
+
+![Página de recorridos y clima](reports/figures/03_recorridos_clima.png)
+
+**4. Evolución:** viajes por día mes a mes desde 2019, y la comparación entre años.
+
+![Página de evolución](reports/figures/04_evolucion.png)
+
+El dashboard no lee la base directamente: [`src/exportar_powerbi.py`](src/exportar_powerbi.py) exporta a Parquet tablas chicas y ya agregadas, una por gráfico. Así, el archivo pesa menos de 300 KB, aunque el análisis se hizo sobre millones de viajes.
 
 ## Resultados
 
@@ -154,7 +176,7 @@ Consultas: [`sql/50_evolucion.sql`](sql/50_evolucion.sql).
 ```
 ├── data/
 │   ├── raw/          # archivos originales del portal (no incluidos en el repo)
-│   ├── processed/    # base DuckDB (se genera con src/)
+│   ├── processed/    # base DuckDB y Parquet para Power BI (se generan con src/)
 │   └── external/     # clima
 ├── sql/              # consultas de limpieza, modelo y análisis, numeradas en orden
 ├── src/              # scripts de Python para descargar y cargar los datos
@@ -180,6 +202,8 @@ pip install -r requirements.txt
    - [Estaciones (SHP) (nuevo sistema)](https://data.buenosaires.gob.ar/dataset/estaciones-bicicletas-publicas): descomprimir el ZIP (`nuevas-estaciones-ecobici.shp` y sus archivos asociados).
    - [Estaciones (GEOJSON) (nuevo sistema)](https://data.buenosaires.gob.ar/dataset/estaciones-bicicletas-publicas/resource/e62fb076-dc64-4c42-b8ea-a8dd47395062): guardar como `estaciones.geojson`. Si el navegador lo abre como texto, usar Ctrl + S.
 2. Generar la base: `python -m src.cargar`. Tarda alrededor de un minuto con todos los años y crea `data/processed/ecobici.duckdb`. Los feriados y el clima ya están en `data/external/`.
+3. Exportar las tablas para el dashboard: `python -m src.exportar_powerbi`. Crea los archivos `.parquet` en `data/processed/powerbi/`.
+4. Abrir `dashboard/ecobici.pbix` con Power BI Desktop. El archivo apunta a los Parquet con la ruta de la computadora donde se armó, así que hay que cambiarla en *Transformar datos > Configuración de origen de datos > Cambiar origen* y después hacer clic en *Actualizar*.
 
 ## Tecnologías
 
